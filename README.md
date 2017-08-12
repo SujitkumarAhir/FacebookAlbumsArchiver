@@ -8,6 +8,12 @@ All facebook albums can be downloaded after facebook authenticaton as well as ca
 First, You need to add your own facebook developer configurations (app id, app secret,redirect url) in fbconfig.php file. then You need to add your own google developer configurations (id, secret,redirect url) in googleConfig.php
 
 
+=======
+## getting Started
+
+First, You need to add your own facebook developer configurations (app id, app secret,redirect url) in fbconfig.php file. then You need to add your own google developer configurations (id, secret,redirect url) in googleConfig.php
+
+>>>>>>> cb05c9fbd144f2cc5b69310c251f902859f488c0
 ## APIs Used
 
 ### Facebook Graph API
