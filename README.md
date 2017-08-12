@@ -50,7 +50,9 @@ open source PHP SDK that allows you to access the Facebook Platform from your PH
 
 The Facebook PHP SDK can be installed with Composer. Run this command:
 
+```
 composer require facebook/graph-sdk
+```
 
 #### Requirements
 
