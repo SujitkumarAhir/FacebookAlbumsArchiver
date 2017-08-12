@@ -2,18 +2,11 @@
 
 All facebook albums can be downloaded after facebook authenticaton as well as can be archived to google drive after google authentication.
 
-<<<<<<< HEAD
-##getting Started
 
-First, You need to add your own facebook developer configurations (app id, app secret,redirect url) in fbconfig.php file. then You need to add your own google developer configurations (id, secret,redirect url) in googleConfig.php
-
-
-=======
 ## getting Started
 
 First, You need to add your own facebook developer configurations (app id, app secret,redirect url) in fbconfig.php file. then You need to add your own google developer configurations (id, secret,redirect url) in googleConfig.php
 
->>>>>>> cb05c9fbd144f2cc5b69310c251f902859f488c0
 ## APIs Used
 
 ### Facebook Graph API
@@ -24,11 +17,6 @@ Facebook Graph API is used to get all the albums as well as all photographs of a
 
 Google Drive API is used to access google drive and manage folders and files of authenticated used. for this api you need google-php-sdk to communicate with google.
 
-<<<<<<< HEAD
-
-
-
-=======
 ## Third party libraries
 
 ### Bootstrap
@@ -100,4 +88,4 @@ phpcbf src --standard=style/ruleset.xml
 ## Security Vulnerabilities
 
 If you have found a security issue, please contact the maintainer directly at pateldevik@gmail.com.
->>>>>>> cb05c9fbd144f2cc5b69310c251f902859f488c0
+
