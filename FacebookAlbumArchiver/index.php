@@ -50,7 +50,7 @@ if (isset($accessToken)) {
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>RtCamp Assignment</title>
+        <title>Facebok Album Archiver</title>
         <link rel="stylesheet" href="bootstrap-3.3.7/css/bootstrap.min.css"/>
         <link href="bootstrap-3.3.7/css/creative.min.css" rel="stylesheet">
     </head>
