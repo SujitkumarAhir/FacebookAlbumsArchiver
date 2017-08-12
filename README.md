@@ -1,4 +1,4 @@
-#Facebook Photos Archiver
+# Facebook Photos Archiver
 
 All facebook albums can be downloaded after facebook authenticaton as well as can be archived to google drive after google authentication.
 
@@ -65,13 +65,13 @@ Run the PHPUnit tests with PHPUnit. You can configure an API key and token in Ba
 To check for coding style violations, run
 
 ```
-php/phpcs src --standard=style/ruleset.xml -np
+phpcs src --standard=style/ruleset.xml -np
 ```
 
 To automatically fix (fixable) coding style violations, run
 
 ```
-php/phpcbf src --standard=style/ruleset.xml
+phpcbf src --standard=style/ruleset.xml
 ```
 
 ## Security Vulnerabilities
