@@ -62,6 +62,10 @@ composer require facebook/graph-sdk
 
 http://devikpatel.cuccfree.com/index.php
 
+### prerequisites
+
+You need to contact me to access the albums of facebook from above link. You are not able to archive your albums from above link without tester rights.
+
 ## Code Quality 
 
 Run the PHPUnit tests with PHPUnit. You can configure an API key and token in googleConfig.php to run all calls, but this will require some setup on the Google Developer Console.
