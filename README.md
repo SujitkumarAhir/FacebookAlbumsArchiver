@@ -60,7 +60,7 @@ composer require facebook/graph-sdk
 
 ## Code Quality 
 
-Run the PHPUnit tests with PHPUnit. You can configure an API key and token in BaseTest.php to run all calls, but this will require some setup on the Google Developer Console.
+Run the PHPUnit tests with PHPUnit. You can configure an API key and token in googleConfig.php to run all calls, but this will require some setup on the Google Developer Console.
 
 ## Coding Style (PHP CodeSniffer)
 
