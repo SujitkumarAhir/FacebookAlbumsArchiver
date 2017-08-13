@@ -61,7 +61,7 @@ composer require facebook/graph-sdk
 
 ## Demo Link
 
-http://devikpatel.cuccfree.com/index.php
+devik.22web.org/index.php
 
 ### prerequisites
 
