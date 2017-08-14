@@ -1,1 +1,3 @@
-libs/
+FacebookAlbumArchiver/libs/google/vendor/google/apiclient-services
+FacebookAlbumArchiver/libs/google/vendor/google/auth
+FacebookAlbumArchiver/libs/google/vendor/monolog/monolog
