@@ -18,7 +18,6 @@ require_once __DIR__ . '../../libs/google/vendor/autoload.php';
 define('APPLICATION_NAME', 'rtCampAssignment');
 define('CLIENT_SECRET_PATH', __DIR__ . '/client_id.json');
 
-
 if (isset($accessToken)) {
     if (isset($_SESSION['facebook_access_token'])) {
         $fb->setDefaultAccessToken($_SESSION['facebook_access_token']);
@@ -83,21 +82,24 @@ if (isset($_POST["NoOfAlbums"]) && isset($_POST["ActionType"]) && $_POST["Action
     for ($i = 0; $i < $no; $i++) {
         if ($_POST["album" . $i] == "true") {
             $ID = $_POST["albumsDownloadId" . $i];
+            $j = 0;
+            $arr = array();
+            $profileRequest = $fb->get('/' . $ID . '/photos?fields=id,source');
+            $tmp = $profileRequest->getGraphEdge();
+            do {
+                $fbPhotosProfile = $tmp->asArray();
+                foreach ($fbPhotosProfile as $key1) {
+                    $arr[$j] = $key1['source'];
+                    $j = $j + 1;
+                }
+            } while ($tmp = $fb->next($tmp));
+            $res = array();
+            $res = multiple_threads_request($arr);
             $profileRequest = $fb->get('/' . $ID . '?fields=photos.limit(1000){id}');
             $fbPhotosProfile = $profileRequest->getGraphNode()->asArray();
-
             $j = 0;
-            foreach ($fbPhotosProfile['photos'] as $key1) {
-                $photo_request = $fb->get('/' . $key1['id'] . '?fields=images.limit(1000)');
-                $photo = $photo_request->getGraphNode()->asArray();
-                if (isset($photo['images'][2]['source'])) {
-                    $download_file = file_get_contents($photo['images'][2]['source']);
-                } else if (isset($photo['images'][1]['source'])) {
-                    $download_file = file_get_contents($photo['images'][1]['source']);
-                } else {
-                    $download_file = file_get_contents($photo['images'][0]['source']);
-                }
-                $zip->addFromString($_POST["AlbumNames" . $i] . '/' . $j . ".jpg", $download_file);
+            foreach ($res as $photo) {
+                $zip->addFromString($_POST["AlbumNames" . $i] . '/' . $j . ".jpg", $photo);
                 $j = $j + 1;
             }
         }
@@ -114,15 +116,39 @@ if (isset($_POST["NoOfAlbums"]) && isset($_POST["ActionType"]) && $_POST["Action
     die;
 }
 
+function multiple_threads_request($nodes) {
+    $mh = curl_multi_init();
+    $curl_array = array();
+    foreach ($nodes as $i => $url) {
+        $curl_array[$i] = curl_init($url);
+        curl_setopt($curl_array[$i], CURLOPT_RETURNTRANSFER, true);
+        curl_multi_add_handle($mh, $curl_array[$i]);
+    }
+    $running = NULL;
+    do {
+        curl_multi_exec($mh, $running);
+    } while ($running > 0);
+
+    $res = array();
+    foreach ($nodes as $i => $url) {
+        $res[$url] = curl_multi_getcontent($curl_array[$i]);
+    }
+
+    foreach ($nodes as $i => $url) {
+        curl_multi_remove_handle($mh, $curl_array[$i]);
+    }
+    curl_multi_close($mh);
+    return $res;
+}
+
 /**
- * Function to generate random strting
+ * Function to enter albums zip file name into database
  * 
- * @param Int $length used to pass length to function
+ * @param Int $length used to pass user informations to function
  *
  * @return Srting
  */
-function generateRandomString($length = 10) 
-{
+function generateRandomString($length = 10) {
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     $charactersLength = strlen($characters);
     $randomString = '';
