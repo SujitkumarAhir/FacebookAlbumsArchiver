@@ -6,7 +6,7 @@
  * PHP version 5.4
  *
  * @category PHP
- * @package  Google
+ * @package  Master
  * @author   Authors <pateldevik@gmail.com>
  * @license  MIT License
  * @link     https://github.com/DevikVekariya/FacebookAlbumsArchiver
@@ -133,17 +133,18 @@ if (isset($accessToken)) {
         <?php
         if (isset($_POST["id"])) {
             $ID = $_POST["id"];
-            $profileRequest = $fb->get('/' . $ID . '?fields=photos.limit(1000){id}');
-            $fbPhotosProfile = $profileRequest->getGraphNode()->asArray();
+            $profileRequest = $fb->get('/' . $ID . '/photos?fields=id,source');
+            $tmp = $profileRequest->getGraphEdge();
             echo "<div class='col-lg-1 col-lg-offset-11 col-sm-1 col-sm-offset-11 col-xs-2 col-xs-offset-10'><a href='#' id='close' class='right' style='color: white;'><i class='glyphicon glyphicon-remove-sign'></i></a></div>";
             echo "<div class='col-lg-12'><div class='rslides_container'>";
             echo "<ul class='rslides' id='slider3' style='display:table;'>";
-            $zipname = 'file.zip';
-            foreach ($fbPhotosProfile['photos'] as $key1) {
-                $photo_request = $fb->get('/' . $key1['id'] . '?fields=images');
-                $photo = $photo_request->getGraphNode()->asArray();
-                echo "<li style='height:100%;'><div class='horizontal frame'><div class='vertical helper'><img class='img-responsive' src='" . $photo['images'][0]['source'] . "' style='max-height: 570px;width:auto;'  alt=''/></div></div></li>";
-            }
+            do {
+                $fbPhotosProfile = $tmp->asArray();
+                foreach ($fbPhotosProfile as $key1) {
+                    echo "<li style='height:100%;'><div class='horizontal frame'><div class='vertical helper'><img class='img-responsive' src='" . $key1['source'] . "' style='max-height: 570px;width:auto;'  alt=''/></div></div></li>";
+                }
+            } while ($tmp = $fb->next($tmp));
+            
             echo "</ul></div></div>";
             die;
         }

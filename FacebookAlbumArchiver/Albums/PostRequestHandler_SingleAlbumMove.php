@@ -16,7 +16,6 @@ require_once __DIR__ . '../../User.php';
 require_once __DIR__ . '../../Album.php';
 require_once __DIR__ . './googleConfig.php';
 
-
 if (isset($accessToken)) {
     if (isset($_SESSION['facebook_access_token'])) {
         $fb->setDefaultAccessToken($_SESSION['facebook_access_token']);
@@ -74,12 +73,13 @@ if (isset($accessToken)) {
       </script>';
 }
 
+
+
 if (isset($_POST["moveId"]) && isset($_POST["AlbumName"])) {
     if (isset($_SESSION['access_token']) && $_SESSION['access_token']) {
         $client = getClient();
-
         $service = new Google_Service_Drive($client);
-        $folderName = "facebook_" . $userData['first_name'] . "_" . 
+        $folderName = "facebook_" . $userData['first_name'] . "_" .
                 $userData['last_name'] . "_albums";
         $i = 0;
         $MainFolderId = "";
@@ -98,12 +98,12 @@ if (isset($_POST["moveId"]) && isset($_POST["AlbumName"])) {
         }
         if ($i == 0) {
             $fileMetadata = new Google_Service_Drive_DriveFile(
-                array(
+                    array(
                 'name' => $folderName,
                 'mimeType' => 'application/vnd.google-apps.folder')
             );
             $file = $service->files->create(
-                $fileMetadata, array(
+                    $fileMetadata, array(
                 'fields' => 'id')
             );
             $MainFolderId = $file->id;
@@ -129,53 +129,95 @@ if (isset($_POST["moveId"]) && isset($_POST["AlbumName"])) {
         }
         $ParentfolderId = $MainFolderId;
         $fileMetadata = new Google_Service_Drive_DriveFile(
-            array(
+                array(
             'parents' => array($ParentfolderId),
             'name' => $folderName,
             'mimeType' => 'application/vnd.google-apps.folder')
         );
         $file = $service->files->create(
-            $fileMetadata, array(
+                $fileMetadata, array(
             'fields' => 'id')
         );
         $albumFolder = $file->id;
         $ParentfolderId = $albumFolder;
-        $ID = $_POST["moveId"];
-        $profileRequest = $fb->get('/' . $ID . '?fields=photos.limit(1000){id}');
-        $fbPhotosProfile = $profileRequest->getGraphNode()->asArray();
+
+        
+        
+        
+        
+        
+        $ID=$_POST["moveId"];
         $i = 0;
-        foreach ($fbPhotosProfile['photos'] as $key1) {
-            $fields='?fields=images.limit(1000)';
-            $photo_request = $fb->get('/' . $key1['id'] . $fields);
-            $photo = $photo_request->getGraphNode()->asArray();
-            if (isset($photo['images'][2]['source'])) {
-                $content = file_get_contents($photo['images'][2]['source']);
-            } else if (isset($photo['images'][1]['source'])) {
-                $content = file_get_contents($photo['images'][1]['source']);
-            } else {
-                $content = file_get_contents($photo['images'][0]['source']);
+        $arr = array();
+        $profileRequest = $fb->get('/' . $ID . '/photos?fields=id,source');
+        $tmp = $profileRequest->getGraphEdge();
+        do {
+            $fbPhotosProfile = $tmp->asArray();
+            foreach ($fbPhotosProfile as $key1) {
+                $arr[$i] = $key1['source'];
+                $i = $i + 1;
             }
+        } while ($tmp = $fb->next($tmp));
+        $res = array();
+        $res = multiple_threads_request($arr);
+        
+        $i = 0;
+        foreach ($res as $photo) {
             $fileMetadata = new Google_Service_Drive_DriveFile(
-                array(
+                    array(
                 'parents' => array($ParentfolderId),
                 'name' => $i . '.jpg')
             );
             $file = $service->files->create(
-                $fileMetadata, array(
-                'data' => $content,
+                    $fileMetadata, array(
+                'data' => $photo,
                 'mimeType' => 'image/jpeg',
                 'uploadType' => 'multipart',
                 'fields' => 'id')
             );
             $i = $i + 1;
         }
-        echo "<h5>Your album is moved to your Google Drive. find directory named "
-        . "<b>facebook_" . $userData['first_name'] . "_" . 
-                $userData['last_name'] . "_albums</b> in root "
-                . "directory of your google drive.</h5>";
+
+
+
+
+
+
+
+        echo "<h5> Your album is moved to your Google Drive. find directory named "
+        . "<b>facebook_" . $userData['first_name'] . "_" .
+        $userData['last_name'] . "_albums</b> in root "
+        . "directory of your google drive.</h5>";
         die;
     } else {
         header('Location: Google.php');
     }
 }
+function multiple_threads_request($nodes){ 
+        $mh = curl_multi_init(); 
+        $curl_array = array(); 
+        foreach($nodes as $i => $url) 
+        { 
+            $curl_array[$i] = curl_init($url); 
+            curl_setopt($curl_array[$i], CURLOPT_RETURNTRANSFER, true); 
+            curl_multi_add_handle($mh, $curl_array[$i]); 
+        } 
+        $running = NULL; 
+        do { 
+            curl_multi_exec($mh,$running); 
+        } while($running > 0); 
+        
+        $res = array(); 
+        foreach($nodes as $i => $url) 
+        { 
+            $res[$url] = curl_multi_getcontent($curl_array[$i]); 
+        } 
+        
+        foreach($nodes as $i => $url){ 
+            curl_multi_remove_handle($mh, $curl_array[$i]); 
+        } 
+        curl_multi_close($mh);        
+        return $res; 
+} 
+
 ?>
