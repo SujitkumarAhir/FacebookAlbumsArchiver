@@ -6,16 +6,18 @@
  * PHP version 5.4
  *
  * @category PHP
- * @package  Google
+ * @package  Albums
  * @author   Authors <pateldevik@gmail.com>
- * @license  No License
+ * @license  MIT
  * @link     https://github.com/DevikVekariya/FacebookAlbumsArchiver
  */
 require_once __DIR__ . '../../fbConfig.php';
 require_once __DIR__ . '../../User.php';
 require_once __DIR__ . '../../Album.php';
+require_once __DIR__ . '/googleConfig.php';
 require_once __DIR__ . '../../Processes.php';
 
+$accessToken = $argv[7];
 
 if (isset($accessToken)) {
     if (isset($_SESSION['facebook_access_token'])) {
@@ -35,6 +37,11 @@ if (isset($accessToken)) {
         // Set default access token to be used in script
         $fb->setDefaultAccessToken($_SESSION['facebook_access_token']);
     }
+
+    if (isset($_GET['code'])) {
+        header('Location: ./');
+    }
+
     try {
         $fields = 'name,first_name,last_name,email,link,gender,locale,picture';
         $profileRequest = $fb->get('/me?fields=' . $fields);
@@ -62,77 +69,56 @@ if (isset($accessToken)) {
     );
     $userData = $user->checkUser($fbUserData);
     $_SESSION['userData'] = $userData;
+//    print_r($userData);
 } else {
     // Get login url
-    echo '<script type="text/javascript">
-           window.location = "./../index.php"
-      </script>';
+    echo "Please Login";
+    die;
 }
-if (isset($_POST["downloadId"])) {
-    $ID = $_POST["downloadId"];
-    $str = generateRandomString();
-    require 'BackgroundProcess.php';
-    $count = $_POST["Count"];
-    $Process = new Processes();
-    $res = $Process->isRunningProcess($userData['id'], 1, $_POST["AlbumName"]);
-    $running = $res['count'];
-    if ($running > 0) {
-        echo "<h5 class='text-danger'><b>Background process already inititated / running</b></h5>";
-        die;
-    } else {
-        $Process->deleteOldProcess($userData['id'], $_POST["AlbumName"], 1);
+
+$albumId = $argv[1];
+$albumName = $argv[2];
+$offset = $argv[3];
+$count = $argv[4];
+$userId = $argv[5];
+$fileName = $argv[6];
+$running = NULL;
+require 'BackgroundProcess.php';
+$proc = new BackgroundProcess();
+
+$ids = $albumId;
+$names = $albumName;
+
+$Process = new Processes();
+
+$res = $Process->getRunningProcesses($userId, 1, 0); //uid,type,status
+$running = $res['count'];
+
+
+if ($running > 0) {
+//wait
+
+    for ($i = 0; $i < 60; $i++) {
+        sleep(10);
+        $res = $Process->getRunningProcesses($userId, 1, 0); //uid,type,status
+        $running = $res['count'];
+        if ($running == 0) {
+            $proc->setCmd("php BackgroundProcess_MultipleAlbumDownload.php " . $ids . " '" . $names . "' " . $offset . " " . $count . " " . $userId . " " . $fileName . " " . $_SESSION['facebook_access_token']);
+            $proc->start();
+            $procid = $proc->getProcessId();
+            $Process->updateProcess($userId, $fileName, 0, 0, $procid, 1);
+            die;
+        }
     }
-
-
-    $offset = 0;
-    $p = 0;
-    $proc = new BackgroundProcess();
-    $proc->setCmd("php BackgroundQueueProcess_MultipleAlbumDownload.php '/" . $ID . "' '/" . $_POST["AlbumName"] . "' " . $offset . " " . $_POST["Count"] . " " . $userData['id'] . " " . $str . " " . $_SESSION['facebook_access_token']);
+    $proc->setCmd("php BackgroundQueueProcess_MultipleAlbumDownload.php " . $ids . " '" . $names . "' " . $offset . " " . $count . " " . $userId . " " . $fileName . " " . $_SESSION['facebook_access_token']);
     $proc->start();
-    $pid = $proc->getProcessId();
-
-    $Process = new Processes();
-    $res = $Process->getRunningProcesses($userData['id'], 1, 0); //uid,type,status
-    $running = $res['count'];
-    $status = 3;
-    if ($running >= 1) {
-        $status = 2;
-    }
-
-    $pData = array(
-        'user_id' => $userData['id'],
-        'album_id' => $str,
-        'album_name' => $_POST["AlbumName"],
-        'count' => '0',
-        'total' => $_POST["Count"],
-        'status' => $status,
-        'type' => '1',
-        'background_process_id' => $pid
-    );
-
-    $Process->setProcess($pData);
-
-
-    echo "<h5><b>Background process initiated </b></h5>";
-}
-
-/**
- * Function to enter albums zip file name into database
- * 
- * @param Int $length used to pass user informations to function
- *
- * @return Srting
- */
-function generateRandomString($length = 10) {
-    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    $charactersLength = strlen($characters);
-    $randomString = '';
-    for ($i = 0; $i < $length; $i++) {
-        $randomString .= $characters[rand(0, $charactersLength - 1)];
-    }
-    return $randomString;
+    $procid = $proc->getProcessId();
+    $Process->updateProcess($userId, $fileName, 0, 2, $procid, 1);
+} else {
+//run
+    $proc->setCmd("php BackgroundProcess_MultipleAlbumDownload.php " . $ids . " '" . $names . "' " . $offset . " " . $count . " " . $userId . " " . $fileName . " " . $_SESSION['facebook_access_token']);
+    $proc->start();
+    $procid = $proc->getProcessId();
+    $Process->updateProcess($userId, $fileName, 0, 0, $procid, 1);
 }
 ?>
-
-
-

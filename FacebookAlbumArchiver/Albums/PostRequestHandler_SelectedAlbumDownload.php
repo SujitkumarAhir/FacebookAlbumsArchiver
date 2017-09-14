@@ -6,17 +6,20 @@
  * PHP version 5.4
  *
  * @category PHP
- * @package  PostRequestHandler_SelectedAlbumDownload
+ * @package  Google
  * @author   Authors <pateldevik@gmail.com>
- * @license  MIT License
+ * @license  No License
  * @link     https://github.com/DevikVekariya/FacebookAlbumsArchiver
  */
 require_once __DIR__ . '../../fbConfig.php';
 require_once __DIR__ . '../../User.php';
 require_once __DIR__ . '../../Album.php';
 require_once __DIR__ . '../../libs/google/vendor/autoload.php';
+require_once __DIR__ . '../../Processes.php';
+
 define('APPLICATION_NAME', 'rtCampAssignment');
 define('CLIENT_SECRET_PATH', __DIR__ . '/client_id.json');
+
 
 if (isset($accessToken)) {
     if (isset($_SESSION['facebook_access_token'])) {
@@ -76,69 +79,65 @@ if (isset($accessToken)) {
 }
 if (isset($_POST["NoOfAlbums"]) && isset($_POST["ActionType"]) && $_POST["ActionType"] == "DownloadSelected") {
     $no = $_POST["NoOfAlbums"];
-    $zipname = generateRandomString() . '.zip';
-    $zip = new ZipArchive;
-    $zip->open('photos/' . $zipname, ZipArchive::CREATE);
+    $str = generateRandomString();
+    $zipname = $str . '.zip';
+    $albums = "";
+    $albumstr = "";
+    $ids = "";
+    $ids = "";
+    $masterCount = 0;
+    require 'BackgroundProcess.php';
+
+    $proc = new BackgroundProcess();
     for ($i = 0; $i < $no; $i++) {
         if ($_POST["album" . $i] == "true") {
             $ID = $_POST["albumsDownloadId" . $i];
-            $j = 0;
-            $arr = array();
-            $profileRequest = $fb->get('/' . $ID . '/photos?fields=id,source');
-            $tmp = $profileRequest->getGraphEdge();
-            do {
-                $fbPhotosProfile = $tmp->asArray();
-                foreach ($fbPhotosProfile as $key1) {
-                    $arr[$j] = $key1['source'];
-                    $j = $j + 1;
-                }
-            } while ($tmp = $fb->next($tmp));
-            $res = array();
-            $res = multiple_threads_request($arr);
-            $profileRequest = $fb->get('/' . $ID . '?fields=photos.limit(1000){id}');
-            $fbPhotosProfile = $profileRequest->getGraphNode()->asArray();
-            $j = 0;
-            foreach ($res as $photo) {
-                $zip->addFromString($_POST["AlbumNames" . $i] . '/' . $j . ".jpg", $photo);
-                $j = $j + 1;
-            }
+            $zipname = $ID . '.zip';
+            $folderName = $_POST["AlbumNames" . $i];
+            $count = $_POST["Count" . $i];
+            $masterCount = $masterCount + $count;
+            $albums = $albums . '/' . $folderName;
+            $albumstr = $albumstr . '"' . $folderName . '" ';
+            $ids = $ids . '/' . $ID;
+            $offset = 0;
         }
     }
-    $zip->close();
-    $Album = new Album();
-    $fbZipData = array(
+
+    $Process = new Processes();
+    $res = $Process->isRunningProcess($userData['id'], 1, $albumstr);
+    $running = $res['count'];
+    if ($running > 0) {
+        echo "<h5 class='text-danger'><b>Background process already inititated / running</b></h5>";
+        die;
+    } else {
+        $Process->deleteOldProcess($userData['id'], $albumstr, 1);
+    }
+
+    $proc->setCmd("php BackgroundQueueProcess_MultipleAlbumDownload.php " . $ids . " '" . $albums . "' " . $offset . " " . $masterCount . " " . $userData['id'] . " " . $str . " " . $_SESSION['facebook_access_token']);
+    $proc->start();
+    $pid = $proc->getProcessId();
+
+    $res = $Process->getRunningProcesses($userData['id'], 1, 0); //uid,type,status
+    $running = $res['count'];
+    $status = 3;
+    if ($running >= 1) {
+        $status = 2;
+    }
+    $pData = array(
         'user_id' => $userData['id'],
-        'zip_name' => $zipname
+        'album_id' => $str,
+        'album_name' => $albumstr,
+        'count' => '0',
+        'total' => $masterCount,
+        'status' => $status,
+        'type' => '1',
+        'background_process_id' => $pid
     );
-    $Album->setAlbum($fbZipData);
-    echo "<h5>You can download a zip fIle from <b>"
-    . "<a href='./photos/" . $zipname . "'>here</a></b>.</h5>";
+    $Process->deleteOldProcess($userData['id'], $albumstr, 1);
+    $Process->setProcess($pData);
+
+    echo "<h5>Background process initiated <b>";
     die;
-}
-
-function multiple_threads_request($nodes) {
-    $mh = curl_multi_init();
-    $curl_array = array();
-    foreach ($nodes as $i => $url) {
-        $curl_array[$i] = curl_init($url);
-        curl_setopt($curl_array[$i], CURLOPT_RETURNTRANSFER, true);
-        curl_multi_add_handle($mh, $curl_array[$i]);
-    }
-    $running = NULL;
-    do {
-        curl_multi_exec($mh, $running);
-    } while ($running > 0);
-
-    $res = array();
-    foreach ($nodes as $i => $url) {
-        $res[$url] = curl_multi_getcontent($curl_array[$i]);
-    }
-
-    foreach ($nodes as $i => $url) {
-        curl_multi_remove_handle($mh, $curl_array[$i]);
-    }
-    curl_multi_close($mh);
-    return $res;
 }
 
 /**

@@ -26,9 +26,9 @@ class User
 {
 
     private $_dbHost = "localhost";
-    private $_dbUsername = "root";
-    private $_dbPassword = "";
-    private $_dbName = "codexworld";
+    private $_dbUsername = "db1testuser";
+    private $_dbPassword = "db1test";
+    private $_dbName = "db1test";
     private $_userTbl = 'users';
 
     /**

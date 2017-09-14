@@ -7,7 +7,7 @@
  * @category Class
  * @package  Album
  * @author   Authors <pateldevik@gmail.com>
- * @license  MIT Licence
+ * @license  No License
  * @link     https://github.com/DevikVekariya/FacebookAlbumsArchiver
  */
 /**
@@ -18,15 +18,16 @@
  * @category Album
  * @package  Album
  * @author   Authors <pateldevik@gmail.com>
- * @license  MIT Licence
+ * @license  No License
  * @link     https://github.com/DevikVekariya/FacebookAlbumsArchiver
  */
 class Album
 {
-    private $_dbHost = "";
-    private $_dbUsername = "";
-    private $_dbPassword = "";
-    private $_dbName = "";
+
+    private $_dbHost = "localhost";
+    private $_dbUsername = "db1testuser";
+    private $_dbPassword = "db1test";
+    private $_dbName = "db1test";
     private $_downloadTbl = 'albumdownloads';
 
     /**

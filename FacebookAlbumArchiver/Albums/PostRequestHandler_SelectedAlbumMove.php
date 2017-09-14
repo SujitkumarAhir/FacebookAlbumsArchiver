@@ -6,15 +6,16 @@
  * PHP version 5.4
  *
  * @category PHP
- * @package  PostRequestHandler_SelectedAlbumMove
+ * @package  Google
  * @author   Authors <pateldevik@gmail.com>
- * @license  MIT License
+ * @license  No License
  * @link     https://github.com/DevikVekariya/FacebookAlbumsArchiver
  */
 require_once __DIR__ . '../../fbConfig.php';
 require_once __DIR__ . '../../User.php';
 require_once __DIR__ . '../../Album.php';
-require_once __DIR__ . './googleConfig.php';
+require_once __DIR__ . '/googleConfig.php';
+require_once __DIR__ . '../../Processes.php';
 
 
 if (isset($accessToken)) {
@@ -78,6 +79,7 @@ if (isset($_POST["NoOfAlbums"]) && isset($_POST["ActionType"]) && $_POST["Action
     if (isset($_SESSION['access_token']) && $_SESSION['access_token']) {
         $client = getClient();
         $service = new Google_Service_Drive($client);
+
         $folderName = "facebook_" . $userData['first_name'] . "_" .
                 $userData['last_name'] . "_albums";
         $i = 0;
@@ -107,9 +109,25 @@ if (isset($_POST["NoOfAlbums"]) && isset($_POST["ActionType"]) && $_POST["Action
             );
             $MainFolderId = $file->id;
         }
+        require 'BackgroundProcess.php';
+        $proc = new BackgroundProcess();
+
+        $Process = new Processes();
         for ($i = 0; $i < $no; $i++) {
             if ($_POST["album" . $i] == "true") {
                 $folderName = $_POST["AlbumNames" . $i];
+
+
+
+                $res = $Process->isRunningProcess($userData['id'], 0, $folderName);
+                $running = $res['count'];
+                if ($running > 0) {
+//    echo "<h5 class='text-danger'><b>Background process already inititated / running</b></h5>";
+                    continue;
+                } else {
+                    $Process->deleteOldProcess($userData['id'], $folderName, 0);
+                }
+
                 $search = "mimeType = 'application/vnd.google-apps.folder' "
                         . "AND trashed != true";
                 $parameters = array("q" => $search);
@@ -142,43 +160,36 @@ if (isset($_POST["NoOfAlbums"]) && isset($_POST["ActionType"]) && $_POST["Action
                 $albumFolder = $file->id;
                 $ParentfolderId = $albumFolder;
                 $ID = $_POST["albumsDownloadId" . $i];
+                $count = $_POST["Count" . $i];
+                $offset = 0;
+                $p = 0;
 
-
-                $arr = array();
-                $profileRequest = $fb->get('/' . $ID . '/photos?fields=id,source');
-                $tmp = $profileRequest->getGraphEdge();
-                $j = 0;
-                do {
-                    $fbPhotosProfile = $tmp->asArray();
-                    foreach ($fbPhotosProfile as $key1) {
-                        $arr[$j] = $key1['source'];
-                        $j = $j + 1;
-                    }
-                } while ($tmp = $fb->next($tmp));
-
-                $res = array();
-                $res = multiple_threads_request($arr);
-
-                $j = 0;
-                foreach ($res as $photo) {
-                    $fileMetadata = new Google_Service_Drive_DriveFile(
-                            array(
-                        'parents' => array($ParentfolderId),
-                        'name' => $j . '.jpg')
-                    );
-                    $file = $service->files->create(
-                            $fileMetadata, array(
-                        'data' => $photo,
-                        'mimeType' => 'image/jpeg',
-                        'uploadType' => 'multipart',
-                        'fields' => 'id')
-                    );
-
-                    $j = $j + 1;
+                $proc->setCmd("php BackgroundQueueProcess_MultipleAlbumMove.php " . $_SESSION['facebook_access_token'] . " " . $_SESSION['access_token']['access_token'] . " " . $_SESSION['access_token']['token_type'] . " " . $_SESSION['access_token']['expires_in'] . " " . $_SESSION['access_token']['created'] . " " . $ID . " '" . $folderName . "' " . $offset . " " . $count . " " . $albumFolder);
+                $proc->start();
+                $pid = $proc->getProcessId();
+                $res = $Process->getRunningProcesses($userData['id'], 0, 0); //uid,type,status
+                $running = $res['count'];
+                $status = 3;
+                if ($running >= 1) {
+                    $status = 2;
                 }
+
+
+                $pData = array(
+                    'user_id' => $userData['id'],
+                    'album_id' => $ID,
+                    'album_name' => $folderName,
+                    'count' => '0',
+                    'total' => $count,
+                    'status' => $status,
+                    'type' => '0',
+                    'background_process_id' => $pid
+                );
+                $Process->setProcess($pData);
+
             }
         }
-        echo "<h5>Your albums are moved to your Google Drive. "
+        echo "<h5>Background process initiated. Your albums will be moved to your Google Drive. "
         . "find directory named <b>facebook_" . $userData['first_name'] .
         "_" . $userData['last_name'] . "_albums</b> in root"
         . " directory of your google drive.</h5>";
@@ -186,31 +197,6 @@ if (isset($_POST["NoOfAlbums"]) && isset($_POST["ActionType"]) && $_POST["Action
     } else {
         header('Location: Google.php');
     }
-}
-
-function multiple_threads_request($nodes) {
-    $mh = curl_multi_init();
-    $curl_array = array();
-    foreach ($nodes as $i => $url) {
-        $curl_array[$i] = curl_init($url);
-        curl_setopt($curl_array[$i], CURLOPT_RETURNTRANSFER, true);
-        curl_multi_add_handle($mh, $curl_array[$i]);
-    }
-    $running = NULL;
-    do {
-        curl_multi_exec($mh, $running);
-    } while ($running > 0);
-
-    $res = array();
-    foreach ($nodes as $i => $url) {
-        $res[$url] = curl_multi_getcontent($curl_array[$i]);
-    }
-
-    foreach ($nodes as $i => $url) {
-        curl_multi_remove_handle($mh, $curl_array[$i]);
-    }
-    curl_multi_close($mh);
-    return $res;
 }
 
 ?>
