@@ -1,4 +1,4 @@
-## getting Started
+## Getting Started
 
 First, You need to add your own facebook developer configurations (app id, app secret,redirect url) in fbconfig.php file. then You need to add your own google developer configurations (id, secret,redirect url) in googleConfig.php
 
@@ -71,6 +71,8 @@ At a time only 1 download process(zipping of Facebook albums) per user can be ru
 You can run 2-5 background processes simultaneously to move your Facebook albums to your google drive. These processes are running simultaneously depending on number of users accessing the website at a time. When running process finishes its task then next processes will start executing in background one by one.
 
 You can abort running/waiting processes. After abort if any process is available in queue then it will be started.
+
+If any process is already initiated and it is in running or waiting state then new copy of the same process cannot be started or initiated. In this case you should first abort running or waiting process then only you can start new one.
 
 ### prerequisites
 
